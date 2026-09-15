@@ -1,0 +1,46 @@
+services:
+  postgresql:
+    image: postgres:16
+    container_name: demand-response-postgresql
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: demand_response
+      POSTGRES_USER: demand_response
+      POSTGRES_PASSWORD: demand_response
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U demand_response -d demand_response
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    # Pinned to 4.4.0, the last release that needs no credentials: from 2026.3.0 onward
+    # `latest` is a unified licensed build that quits at startup with "License activation
+    # failed" (exit code 55) unless LOCALSTACK_AUTH_TOKEN is set.
+    # Keep this aligned with the image TestcontainersConfiguration pins for the integration tests.
+    image: localstack/localstack:4.4.0
+    container_name: demand-response-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sns,sqs
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - ./localstack-init:/etc/localstack/init/ready.d
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test: awslocal sns list-topics || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgresql_data:
+  localstack_data:

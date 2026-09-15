@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package com.example.demandresponse;
+
+option java_package = "com.example.demandresponse.grpc";
+option java_multiple_files = true;
+
+import "google/protobuf/timestamp.proto";
+
+// Demand response events instruct every enrolled thermostat to shift its
+// setpoint for a bounded window, easing load on the grid during peak demand.
+service DemandResponseService {
+
+  // Validates the requested event and fans it out to every enrolled
+  // thermostat, one message per device.
+  //
+  // Returns INVALID_ARGUMENT when the requested event violates a business
+  // rule (temperature delta out of range, event in the past, or a duration
+  // outside the supported window).
+  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
+}
+
+// A request to run a demand response event across the enrolled fleet.
+message CreateEventRequest {
+
+  // Setpoint adjustment in whole degrees Fahrenheit. Must be non-zero and
+  // within +/- 5 degrees. Negative values cool, positive values heat.
+  int32 temperature_delta = 1;
+
+  // When the event begins. Must be in the future.
+  google.protobuf.Timestamp start_time = 2;
+
+  // When the event ends. Must be after start_time, and the resulting
+  // duration must be between 15 minutes and 4 hours.
+  google.protobuf.Timestamp end_time = 3;
+}
+
+// The outcome of a successfully created event.
+message CreateEventResponse {
+
+  // Number of messages published — one per enrolled thermostat.
+  int32 messages_published = 1;
+}
